@@ -1,8 +1,8 @@
 <template>
     <v-hover v-slot="{ isHovering, props }">
-        <v-card width="250px" class="ma-2" v-bind="props" :elevation="isHovering ? 24 : 4"
+        <v-card width="250px" class="ma-2" v-bind="props" :elevation="isHovering ? 18 : 4"
             @click.prevent="detalharPokemon()">
-            <v-card-title>
+            <v-card-title class="py-1">
                 <v-row justify="space-between" class="ma-1">
                     <span>#{{ pokemon.id }} </span>
                     <span> {{ pokemon.nome.toUpperCase() }}</span>
@@ -15,7 +15,7 @@
                     <span>{{ pokemon.tipo }}</span>
                 </v-row>
             </v-card-subtitle>
-            <v-card-text>
+            <v-card-text class="py-1">
                 <v-img :src="pokemon.imgUrl" class="my-2"></v-img>
                 <v-row justify="space-between" class="ma-1">
                     <span>Altura: </span>

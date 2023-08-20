@@ -1,13 +1,18 @@
 <template>
   <v-container>
     <v-col cols="12">
+      <Paginacao @pagina-anterior="buscarPokemons('anterior')" @proxima-pagina="buscarPokemons('proxima')" />
+    </v-col>
+    <v-col cols="12">
       <v-row justify="center">
         <template v-for="pok in pokemons">
           <PokeCard :pokemon="pok"></PokeCard>
         </template>
       </v-row>
     </v-col>
-
+    <v-col cols="12">
+      <Paginacao @pagina-anterior="buscarPokemons('anterior')" @proxima-pagina="buscarPokemons('proxima')" />
+    </v-col>
   </v-container>
 </template>
 
@@ -18,24 +23,44 @@ import Pokemon from "@/models/Pokemon";
 import StatusPokemon from '@/models/StatusPokemon';
 // Components
 import PokeCard from '@/components/PokeCard.vue';
+import Paginacao from '@/components/Paginacao.vue';
 
 export default defineComponent({
   name: 'HomeView',
   components: {
-    PokeCard
+    PokeCard,
+    Paginacao
   },
   data() {
     return {
-      pokemons: [] as Array<Pokemon>
+      pokemons: [] as Array<Pokemon>,
+      nextPrevius: {
+        next: '',
+        previous: ''
+      }
     }
   },
   mounted() {
-    this.buscarPokemons()
+    this.buscarPokemons(null);
   },
   methods: {
-    buscarPokemons() {
-      $axios.get('pokemon')
+    buscarPokemons(paginacao: string | null): void {
+      this.pokemons = [];
+      let url = '';
+
+      if (paginacao != 'proxima' && paginacao != 'anterior') {
+        url = 'pokemon';
+      } else if (paginacao == 'proxima') {
+        url = this.nextPrevius.next;
+      } else {
+        url = this.nextPrevius.previous;
+      }
+
+      $axios.get(url)
         .then((resposta: any) => {
+          this.nextPrevius.next = resposta.data.next;
+          this.nextPrevius.previous = resposta.data.previous;
+
           resposta.data.results.forEach((pokemon: any) => {
             $axios.get(pokemon.url)
               .then((pok: any) => {
