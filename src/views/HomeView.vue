@@ -1,17 +1,17 @@
 <template>
-  <v-container>
+  <v-container id="impressao">
     <v-col cols="12">
-      <Paginacao @pagina-anterior="buscarPokemons('anterior')" @proxima-pagina="buscarPokemons('proxima')" />
+      <Paginacao @pagina-anterior="buscarPokemons(pagina.previous)" @proxima-pagina="buscarPokemons(pagina.next)" />
     </v-col>
     <v-col cols="12">
+      <v-alert v-model="alertarAlgo" type="warning" :title="alerta.titulo" :text="alerta.mensagem" closable
+        variant="tonal">
+      </v-alert>
       <v-row justify="center">
         <template v-for="pok in pokemons">
           <PokeCard :pokemon="pok"></PokeCard>
         </template>
       </v-row>
-    </v-col>
-    <v-col cols="12">
-      <Paginacao @pagina-anterior="buscarPokemons('anterior')" @proxima-pagina="buscarPokemons('proxima')" />
     </v-col>
   </v-container>
 </template>
@@ -21,9 +21,11 @@ import { defineComponent } from 'vue';
 import $axios from '@/plugins/axios';
 import Pokemon from "@/models/Pokemon";
 import StatusPokemon from '@/models/StatusPokemon';
+import NomesPokemons from '@/models/NomesPokemons';
 // Components
 import PokeCard from '@/components/PokeCard.vue';
 import Paginacao from '@/components/Paginacao.vue';
+import { AxiosError, AxiosResponse } from 'axios';
 
 export default defineComponent({
   name: 'HomeView',
@@ -34,9 +36,15 @@ export default defineComponent({
   data() {
     return {
       pokemons: [] as Array<Pokemon>,
-      nextPrevius: {
+      nomesPokemons: new NomesPokemons(),
+      pagina: {
         next: '',
         previous: ''
+      },
+      alertarAlgo: false,
+      alerta: {
+        titulo: '',
+        mensagem: ''
       }
     }
   },
@@ -46,41 +54,45 @@ export default defineComponent({
   methods: {
     buscarPokemons(paginacao: string | null): void {
       this.pokemons = [];
-      let url = '';
-
-      if (paginacao != 'proxima' && paginacao != 'anterior') {
-        url = 'pokemon';
-      } else if (paginacao == 'proxima') {
-        url = this.nextPrevius.next;
-      } else {
-        url = this.nextPrevius.previous;
-      }
+      const url = !paginacao ? 'pokemon' : paginacao;
 
       $axios.get(url)
-        .then((resposta: any) => {
-          this.nextPrevius.next = resposta.data.next;
-          this.nextPrevius.previous = resposta.data.previous;
+        .then((resposta: AxiosResponse) => {
+          this.pagina.next = resposta.data.next;
+          this.pagina.previous = resposta.data.previous;
 
           resposta.data.results.forEach((pokemon: any) => {
             $axios.get(pokemon.url)
-              .then((pok: any) => {
-                let newPokemon =
-                  new Pokemon(pok.data.id, pok.data.name, pok.data.height, pok.data.weight, pok.data.types[0].type.name,
-                    pok.data.stats.map((s: any) => new StatusPokemon(s.stat.name, s.base_stat)), pok.data.sprites.other.home.front_default)
-                this.pokemons.push(newPokemon);
+              .then((pok: AxiosResponse) => {
+                this.pokemons.push(this.converterRespToPokemon(pok));
                 this.ordenarPokemons()
               })
-              .catch((err: any) => {
-                console.log(err)
+              .catch((err: AxiosError) => {
+                this.alertarMensagem(err);
+                this.alertarAlgo = true;
               })
 
           });
         })
-        .catch((erro: any) => {
-          console.log(erro)
+        .catch((erro: AxiosError) => {
+          this.alertarMensagem(erro);
+          this.alertarAlgo = true;
         })
     },
-    ordenarPokemons() {
+    alertarMensagem(mensagem: AxiosError): void {
+      this.alerta = {
+        titulo: mensagem.name,
+        mensagem: mensagem.message
+      }
+    },
+    converterRespToPokemon(pok: AxiosResponse): Pokemon {
+      const newPokemon =
+        new Pokemon(pok.data.id, pok.data.name, pok.data.height, pok.data.weight, pok.data.types[0].type.name,
+          pok.data.stats.map((st: any) => new StatusPokemon(st.stat.name, st.base_stat)), pok.data.sprites.other.home.front_default);
+
+      return newPokemon;
+    },
+    ordenarPokemons(): void {
       this.pokemons.sort((a, b) => a.id - b.id)
     }
   }
